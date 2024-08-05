@@ -16,8 +16,9 @@
 const Hoek = require("@hapi/hoek"),
     waitPort = require("wait-port"),
     {
-        MYSQL_HOST: HOST = "rdbms",
+        MYSQL_HOST: HOST = MYSQL_HOST,
         MYSQL_HOST_FILE: HOST_FILE,
+        MYSQL_PORT: MYSQL_PORT,
         DATABASE_USER: USER = "catapult",
         DATABASE_USER_FILE: USER_FILE,
         DATABASE_USER_PASSWORD: PASSWORD = "quartz",
@@ -32,10 +33,10 @@ module.exports = async () => {
         password = PASSWORD_FILE ? fs.readFileSync(PASSWORD_FILE) : PASSWORD,
         database = DB_FILE ? fs.readFileSync(DB_FILE) : DB;
 
-    await waitPort({host, port: 3306});
+    await waitPort({host, port: parseInt(MYSQL_PORT) || 3306});
 
     return {
-        client: "mysql",
+        client: "mysql2",
         connection: {host, user, password, database},
         postProcessResponse: (result, queryContext) => {
             if (result && queryContext && queryContext.jsonCols) {
@@ -52,11 +53,13 @@ module.exports = async () => {
                                     match = Hoek.reach(row, parts.slice(0, -1).join("."));
                                 }
 
-                                try {
-                                    match[field] = JSON.parse(match[field]);
-                                }
-                                catch (ex) {
-                                    throw new Error(`Failed to parse JSON in key ('${k}' in '${row}'): ${ex}`);
+                                if (typeof(match[field]) !== 'object') {
+                                    try {
+                                        match[field] = JSON.parse(match[field]);
+                                    }
+                                    catch (ex) {
+                                        throw new Error(`Failed to parse JSON in key ('${k}' in '${row}'): ${ex}`);
+                                    }
                                 }
                             }
 
@@ -76,11 +79,13 @@ module.exports = async () => {
                             match = Hoek.reach(result, parts.slice(0, -1).join("."));
                         }
 
-                        try {
+                        if (typeof(match[field]) !== 'object') {
+                            try {
                             match[field] = JSON.parse(match[field]);
-                        }
-                        catch (ex) {
-                            throw new Error(`Failed to parse JSON in key ('${k}' in '${result}'): ${ex}`);
+                            }
+                            catch (ex) {
+                                throw new Error(`Failed to parse JSON in key ('${k}' in '${result}'): ${ex}`);
+                            }
                         }
                     }
                 }

@@ -23,6 +23,9 @@ const Hapi = require("@hapi/hapi"),
     AuthJwt = require("@hapi/jwt"),
     waitPort = require("wait-port"),
     {
+        MYSQL_HOST,
+        MYSQL_PORT,
+        HOST_PORT,
         LRS_ENDPOINT,
         LRS_USERNAME,
         LRS_PASSWORD,
@@ -39,7 +42,7 @@ const provision = async () => {
     const server = Hapi.server(
             {
                 host: process.argv[3],
-                port: process.argv[2] || 3398,
+                port: process.argv[2] || HOST_PORT || 3398,
                 routes: {
                     cors: true,
                     response: {
@@ -65,7 +68,7 @@ const provision = async () => {
             }
         };
 
-    await waitPort({host: "rdbms", port: 3306});
+    await waitPort({host: MYSQL_HOST, port: parseInt(MYSQL_PORT) || 3306});
 
     const db = await require("./lib/db")();
 
@@ -74,7 +77,8 @@ const provision = async () => {
     if (!lrsEndpoint.endsWith("/")) {
         lrsEndpoint += "/";
     }
-    console.log("What is the lrs endpoint here? is the  added???  " + lrsEndpoint);
+    console.log("What is the lrs endpoint here? is the / added???  " + lrsEndpoint);
+    console.log("What is the CONTENT_URL??  " + CONTENT_URL);
     server.app = {
         contentUrl: CONTENT_URL || "http://localhost:3398/content",
         lrs: {
